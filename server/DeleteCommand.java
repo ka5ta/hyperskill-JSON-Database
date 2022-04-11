@@ -2,14 +2,14 @@ package server;
 
 public class DeleteCommand implements Command{
 
-    private int index;
+    private String key;
 
-    public DeleteCommand(int index) {
-        this.index = index;
+    public DeleteCommand(String key) {
+        this.key = key;
     }
 
     @Override
-    public String execute(DataStorage storage) {
-        return storage.delete(index);
+    public ResponseDTO execute(DataStorage storage) {
+        return storage.delete(key);
     }
 }

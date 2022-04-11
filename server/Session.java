@@ -1,5 +1,9 @@
 package server;
 
+import client.MessageDTO;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -17,79 +21,59 @@ class Session extends Thread {
 
     @Override
     public void run() {
+
         try (
                 DataInputStream dataIn = new DataInputStream(socket.getInputStream());
                 DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())
         ) {
+            //receive and deserialize message
             String rawRequest = dataIn.readUTF(); // reading a msg
+            MessageDTO deserializedMessage = new Gson().fromJson(rawRequest, MessageDTO.class);
 
-            Command command = parseRequest(rawRequest);
+            Command command = parseRequest(deserializedMessage);
             controller.setCommand(command);
-            String result = controller.execute();
+            ResponseDTO result = controller.execute();
 
-            dataOut.writeUTF(result); // send msg to the client
+            // serialize response and send
+            Gson gsonSerialize = new GsonBuilder()
+                    .registerTypeAdapter(ResponseDTO.class, ResponseDTO.serializer)
+                    .create();
+
+            String response = gsonSerialize.toJson(result);
+            dataOut.writeUTF(response); // send msg to the client
+
             //socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public Command parseRequest(String rawRequest){
-        String[] splitInputToWords = transformToWords(rawRequest);
+    public Command parseRequest(MessageDTO deserialized){
 
         //Get Action
-        Action action = Action.getAction(splitInputToWords[0]);
+        Action action = Action.getAction(deserialized.getType());
         if (action == Action.EXIT) {
             return new CommandExit();
         }
 
-        //Get index From Input
-        Integer indexFromInput = getIndexFromInput(splitInputToWords);
-        if (checkIfNull(indexFromInput)) {
-            throw new RuntimeException("Application was terminated. Index is 'null'");
-        }
+        //Get Index
+        String keyFromInput = deserialized.getKey();
 
         switch (action) {
             case GET:
-                return new GetCommand(indexFromInput);
+                return new GetCommand(keyFromInput);
             case SET:
-                String messageToSent = getTextFromInput(splitInputToWords, rawRequest);
-                return new SaveCommand(indexFromInput, messageToSent);
+                return new SaveCommand(keyFromInput, deserialized.getValue());
             case DELETE:
-                return new DeleteCommand(indexFromInput);
+                return new DeleteCommand(keyFromInput);
         }
         throw new RuntimeException("Application was terminated. Wrong Command 'null'");
-    }
-
-    private static String[] transformToWords(String input) {
-        if (Objects.isNull(input)) {
-            throw new NullPointerException("Input is null.");
-        }
-        return input.split("\\s+");
-    }
-
-    private static Integer getIndexFromInput(String[] words) {
-        if (words.length < 2) {
-            return null;
-        }
-        String txtNumber = words[1];
-        try {
-            return Integer.parseInt(txtNumber);
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private static <T> boolean checkIfNull(T value) {
         return Objects.isNull(value);
     }
 
-    private static String getTextFromInput (String[]words, String userText){
-        if (words.length < 3) {
-            return null;
-        }
-        int start = userText.indexOf(words[2]);
-        return userText.substring(start);
-    }
+
 }
 

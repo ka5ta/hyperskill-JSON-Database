@@ -1,5 +1,7 @@
 package client;
 
+import com.google.gson.Gson;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -12,12 +14,15 @@ public class Main {
 
     public static void main(String[] args) {
 
-        String message = getMessage(args);
-        sendMessageToServer(message);
+        MessageDTO messageDTO = getMessage(args);
+
+        Gson gson = new Gson();
+        String jsonMessage = gson.toJson(messageDTO);
+        sendMessageToServer(jsonMessage);
 
     }
 
-    private static String getMessage(String[] args){
+    private static MessageDTO getMessage(String[] args){
         String type = null;
         String index = null;
         String text = null;
@@ -27,10 +32,10 @@ public class Main {
                 case "-t":
                     type = args[i];
                     break;
-                case "-i":
+                case "-k":
                     index = args[i];
                     break;
-                case "-m":
+                case "-v":
                     text = args[i];
             }
         }
@@ -39,15 +44,7 @@ public class Main {
             throw new NullPointerException("Type is null");
         }
 
-        if(Objects.isNull(index)){
-            return type;
-        }
-
-        if(Objects.isNull(text)){
-            return String.format("%s %s", type, index);
-        }
-
-        return String.format("%s %s %s", type, index, text);
+        return new MessageDTO(type, index, text);
     }
 
     private static void sendMessageToServer(String messageToSend) {
@@ -66,4 +63,5 @@ public class Main {
             e.printStackTrace();
         }
     }
+
 }

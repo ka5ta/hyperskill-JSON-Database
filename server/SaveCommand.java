@@ -3,16 +3,16 @@ package server;
 public class SaveCommand implements Command{
 
 
-    private int index;
-    private String text;
+    private String key;
+    private String value;
 
-    public SaveCommand(int index, String text) {
-        this.index = index;
-        this.text = text;
+    public SaveCommand(String key, String value) {
+        this.key = key;
+        this.value = value;
     }
 
     @Override
-    public String execute(DataStorage storage) {
-        return storage.save(index, text);
+    public ResponseDTO execute(DataStorage storage) {
+        return storage.save(key, value);
     }
 }

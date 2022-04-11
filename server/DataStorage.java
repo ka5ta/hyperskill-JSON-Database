@@ -2,47 +2,39 @@ package server;
 
 import java.net.ResponseCache;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class DataStorage {
-    final String[] storage;
+    final Map<String, String> storage;
 
     public DataStorage() {
-        this.storage = new String[1001];
-        Arrays.fill(this.storage, "");
+        this.storage = new HashMap<>(1000);
     }
 
-
-    public String get(int index) {
+    public ResponseDTO get(String key) {
         try {
-            String text = storage[index];
-            if ("".equals(text)) {
-                return Status.ERROR.name();
+            String returnedKey = storage.get(key);
+            if (Objects.isNull(returnedKey)) {
+                throw new NullPointerException();
             }
-            return text;
-        } catch (RuntimeException e) {
-            return Status.ERROR.name();
+            return new ResponseDTO(Status.OK, returnedKey);
+        } catch (NullPointerException e) {
+            return new ResponseDTO(Status.ERROR, "No such key");
         }
     }
 
-    public String save(int index, String text) {
-        try {
-            storage[index] = text;
-            return Status.OK.name();
-        } catch (IndexOutOfBoundsException e) {
-            return Status.ERROR.name();
-        }
+    public ResponseDTO save(String key, String value) {
+        storage.put(key, value);
+        return new ResponseDTO(Status.OK);
     }
 
-    public String delete(int index) {
-        try {
-            storage[index] = "";
-            return Status.OK.name();
-        } catch (IndexOutOfBoundsException e) {
-            return Status.ERROR.name();
+    public ResponseDTO delete(String key) {
+        if (storage.containsKey(key)) {
+            storage.remove(key);
+            return new ResponseDTO(Status.OK);
         }
+        return new ResponseDTO(Status.ERROR, "No such key");
     }
-
-
-
 }

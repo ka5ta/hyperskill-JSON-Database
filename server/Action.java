@@ -1,6 +1,6 @@
 package server;
 
-enum Action {
+public enum Action {
     GET, SET, DELETE, EXIT;
 
     public static Action getAction(String command) {
@@ -10,4 +10,6 @@ enum Action {
             return Action.EXIT;
         }
     }
+
 }
+

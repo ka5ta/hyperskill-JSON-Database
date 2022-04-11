@@ -15,7 +15,7 @@ public class Controller {
         this.command = command;
     }
 
-    public String execute() {
+    public ResponseDTO execute() {
         return command.execute(storage);
     }
 }

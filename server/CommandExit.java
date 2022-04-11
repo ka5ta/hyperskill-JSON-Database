@@ -4,7 +4,7 @@ public class CommandExit implements Command{
 
 
     @Override
-    public String execute(DataStorage storage) {
-        return Status.OK.name();
+    public ResponseDTO execute(DataStorage storage) {
+        return new ResponseDTO(Status.OK);
     }
 }
