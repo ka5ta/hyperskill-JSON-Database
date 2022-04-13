@@ -7,45 +7,59 @@ import com.google.gson.GsonBuilder;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 class Session extends Thread {
     private final Socket socket;
+    private final ServerSocket serverSocket;
     private final Controller controller;
 
-    public Session(Socket socket, Controller controller) {
+    public Session(Socket socket, ServerSocket serverSocket, Controller controller) {
         this.socket = socket;
+        this.serverSocket = serverSocket;
         this.controller = controller;
     }
 
     @Override
     public void run() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit( () -> {
+            try (
+                    DataInputStream dataIn = new DataInputStream(socket.getInputStream());
+                    DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())
+            ) {
+                //receive and deserialize message
+                String rawRequest = dataIn.readUTF(); // reading a msg
+                MessageDTO deserializedMessage = new Gson().fromJson(rawRequest, MessageDTO.class);
 
-        try (
-                DataInputStream dataIn = new DataInputStream(socket.getInputStream());
-                DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())
-        ) {
-            //receive and deserialize message
-            String rawRequest = dataIn.readUTF(); // reading a msg
-            MessageDTO deserializedMessage = new Gson().fromJson(rawRequest, MessageDTO.class);
+                Command command = parseRequest(deserializedMessage);
+                controller.setCommand(command);
+                ResponseDTO result = controller.execute();
 
-            Command command = parseRequest(deserializedMessage);
-            controller.setCommand(command);
-            ResponseDTO result = controller.execute();
+                // serialize response and send
+                Gson gsonSerialize = new GsonBuilder()
+                        .registerTypeAdapter(ResponseDTO.class, ResponseDTO.serializer)
+                        .create();
 
-            // serialize response and send
-            Gson gsonSerialize = new GsonBuilder()
-                    .registerTypeAdapter(ResponseDTO.class, ResponseDTO.serializer)
-                    .create();
+                String response = gsonSerialize.toJson(result);
+                dataOut.writeUTF(response); // send msg to the client
 
-            String response = gsonSerialize.toJson(result);
-            dataOut.writeUTF(response); // send msg to the client
+                if(controller.isShuttingDown()){
+                    this.serverSocket.close();
+                    this.interrupt();
+                }
 
-            //socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                //socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        executor.shutdown();
+
     }
 
     public Command parseRequest(MessageDTO deserialized){
@@ -53,7 +67,7 @@ class Session extends Thread {
         //Get Action
         Action action = Action.getAction(deserialized.getType());
         if (action == Action.EXIT) {
-            return new CommandExit();
+            return new ExitCommand();
         }
 
         //Get Index

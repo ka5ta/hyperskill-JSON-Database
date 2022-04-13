@@ -8,6 +8,7 @@ public class ResponseDTO {
     Status status;
     String text;
 
+
     public ResponseDTO(Status status) {
         this.status = status;
     }

@@ -12,7 +12,7 @@ public class Main {
     final static String HOST = "127.0.0.1";
     final static int PORT = 23456;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         MessageDTO messageDTO = getMessage(args);
 
@@ -22,29 +22,25 @@ public class Main {
 
     }
 
-    private static MessageDTO getMessage(String[] args){
-        String type = null;
-        String index = null;
-        String text = null;
+    private static MessageDTO getMessage(String[] args) throws IOException {
+        MessageDTO message = new MessageDTO();
 
         for (int i = 1; i < args.length; i++) {
             switch(args[i-1]){
                 case "-t":
-                    type = args[i];
+                    message.setType(args[i]);
                     break;
                 case "-k":
-                    index = args[i];
+                    message.setKey(args[i]);
                     break;
                 case "-v":
-                    text = args[i];
+                    message.setValue(args[i]);
+                    break;
+                case "-in":
+                    return message.messageFromFile(args[i]);
             }
         }
-
-        if(Objects.isNull(type)){
-            throw new NullPointerException("Type is null");
-        }
-
-        return new MessageDTO(type, index, text);
+        return message;
     }
 
     private static void sendMessageToServer(String messageToSend) {

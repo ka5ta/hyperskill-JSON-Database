@@ -1,6 +1,6 @@
 package server;
 
-public class CommandExit implements Command{
+public class ExitCommand implements Command{
 
 
     @Override
