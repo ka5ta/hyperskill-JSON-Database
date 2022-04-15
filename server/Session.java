@@ -1,14 +1,18 @@
 package server;
 
-import client.MessageDTO;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
+import server.Commands.*;
+import server.Enums.Action;
+import server.Model.Controller;
+import server.Model.ResponseDTO;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,68 +30,71 @@ class Session extends Thread {
 
     @Override
     public void run() {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.submit( () -> {
-            try (
-                    DataInputStream dataIn = new DataInputStream(socket.getInputStream());
-                    DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())
-            ) {
-                //receive and deserialize message
-                String rawRequest = dataIn.readUTF(); // reading a msg
-                MessageDTO deserializedMessage = new Gson().fromJson(rawRequest, MessageDTO.class);
+        try (
+                DataInputStream dataIn = new DataInputStream(socket.getInputStream());
+                DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())
+        ) {
+            //Receive and deserialize message
+            String rawRequest = dataIn.readUTF(); // reading a msg
+            JsonObject deserializedJsonObject = jsonStringToObject(rawRequest);
 
-                Command command = parseRequest(deserializedMessage);
-                controller.setCommand(command);
-                ResponseDTO result = controller.execute();
+            Command command = parseRequest(deserializedJsonObject);
+            controller.setCommand(command);
+            ResponseDTO result = controller.execute();
 
-                // serialize response and send
-                Gson gsonSerialize = new GsonBuilder()
-                        .registerTypeAdapter(ResponseDTO.class, ResponseDTO.serializer)
-                        .create();
+            //Serialize response and send
+            String response = result.serializeTextResponse();
+            dataOut.writeUTF(response); // send msg to the client
 
-                String response = gsonSerialize.toJson(result);
-                dataOut.writeUTF(response); // send msg to the client
-
-                if(controller.isShuttingDown()){
-                    this.serverSocket.close();
-                    this.interrupt();
-                }
-
-                //socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (controller.isShuttingDown()) {
+                this.serverSocket.close();
+                this.interrupt();
             }
-        });
-        executor.shutdown();
-
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public Command parseRequest(MessageDTO deserialized){
+    private JsonObject jsonStringToObject(String jsonString) {
+        return new GsonBuilder()
+                .create()
+                .fromJson(jsonString, JsonObject.class);
+    }
+
+    public Command parseRequest(JsonObject deserialized) {
 
         //Get Action
-        Action action = Action.getAction(deserialized.getType());
+        Action action = Action.getAction(deserialized.get("type").getAsString());
         if (action == Action.EXIT) {
             return new ExitCommand();
         }
 
-        //Get Index
-        String keyFromInput = deserialized.getKey();
+        //Get Keys
+        List<String> keysList = getKeysList(deserialized);
 
         switch (action) {
             case GET:
-                return new GetCommand(keyFromInput);
+                return new GetCommand(keysList);
             case SET:
-                return new SaveCommand(keyFromInput, deserialized.getValue());
+                JsonElement value = deserialized.get("value");
+                return new SaveCommand(keysList, value);
             case DELETE:
-                return new DeleteCommand(keyFromInput);
+                return new DeleteCommand(keysList);
         }
-        throw new RuntimeException("Application was terminated. Wrong Command 'null'");
+        throw new RuntimeException("There is no such action");
+
     }
 
-    private static <T> boolean checkIfNull(T value) {
-        return Objects.isNull(value);
+    private List<String> getKeysList(JsonObject jsonObject) {
+        List<String> keysList = new ArrayList<>();
+        JsonElement jsonElement = jsonObject.get("key");
+        if (jsonElement.isJsonArray()) {
+            JsonArray jsonArray = jsonElement.getAsJsonArray();
+            jsonArray.forEach(element -> keysList.add(element.getAsString()));
+        } else {
+            keysList.add(jsonElement.getAsString());
+        }
+        return keysList;
     }
-
-
 }
 

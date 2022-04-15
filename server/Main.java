@@ -1,10 +1,12 @@
 package server;
 
+import server.Database.DataStorage;
+import server.Model.Controller;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.*;
 
 public class Main {
 
@@ -12,15 +14,15 @@ public class Main {
 
     public static void main(String[] args) {
 
-        DataStorage textStore = new DataStorage();
-        runServer(textStore);
+        DataStorage jsonDatabase = new DataStorage();
+        runServer(jsonDatabase);
     }
 
+    private static void runServer(DataStorage jsonDatabase) {
+        Controller controller = new Controller(jsonDatabase);
 
-    private static void runServer(DataStorage storage) {
-        System.out.println("Server started!");
-        Controller controller = new Controller(storage);
         try (ServerSocket server = new ServerSocket(PORT)) {
+            System.out.println("Server started!");
             while (!controller.isShuttingDown()) {
                 Socket acceptedSocket = server.accept();
                 Session session = new Session(acceptedSocket, server, controller); // accepting a new client

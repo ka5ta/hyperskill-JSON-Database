@@ -1,15 +1,17 @@
-package server;
+package server.Model;
 
-import java.util.Objects;
+import server.Commands.Command;
+import server.Commands.ExitCommand;
+import server.Database.DataStorage;
 
 public class Controller {
 
     private Command command;
-    private DataStorage storage;
+    private final DataStorage jsonDatabase;
     private boolean shuttingDown = false;
 
-    public Controller(DataStorage storage) {
-        this.storage = storage;
+    public Controller(DataStorage jsonDatabase) {
+        this.jsonDatabase = jsonDatabase;
     }
 
     public void setCommand(Command command) {
@@ -18,10 +20,9 @@ public class Controller {
 
     public ResponseDTO execute() {
         if(command instanceof ExitCommand){
-            System.out.println("Shutdown command received. setting shuttingDown flag");
             shuttingDown = true;
         }
-        return command.execute(storage);
+        return command.execute(jsonDatabase);
     }
 
     public boolean isShuttingDown() {
