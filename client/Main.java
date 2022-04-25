@@ -56,6 +56,8 @@ public class Main {
                     break;
                 case "-in":
                     return jsonFromFile(args[i]);
+                default:
+                    break;
             }
         }
         return jsonObject;

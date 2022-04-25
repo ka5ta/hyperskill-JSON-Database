@@ -13,9 +13,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 class Session extends Thread {
     private final Socket socket;
@@ -80,9 +77,9 @@ class Session extends Thread {
                 return new SaveCommand(keysList, value);
             case DELETE:
                 return new DeleteCommand(keysList);
+            default:
+                throw new RuntimeException("There is no such action");
         }
-        throw new RuntimeException("There is no such action");
-
     }
 
     private List<String> getKeysList(JsonObject jsonObject) {

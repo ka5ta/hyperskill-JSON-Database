@@ -87,7 +87,7 @@ public class DataStorage {
         return new ResponseDTO(Status.OK);
     }
 
-    private synchronized void loadDatabaseFromFile() {
+    private void loadDatabaseFromFile() {
         readLock.lock();
 
         try (
@@ -103,7 +103,7 @@ public class DataStorage {
         }
     }
 
-    private synchronized void saveDatabaseToFile() {
+    private void saveDatabaseToFile() {
         writeLock.lock();
 
         try (
